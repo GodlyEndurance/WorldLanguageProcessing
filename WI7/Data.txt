@@ -1,3 +1,2 @@
 
-{"name": "Alice", "email": "alice@example.com", "age": 22}
-{"name": "Bob", "email": "bob@example.com", "age": 25}
+This will the processed text from the OCR and processing. 

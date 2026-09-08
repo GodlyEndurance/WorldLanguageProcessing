@@ -24,7 +24,7 @@ class c_DataTests(unittest.TestCase):
         data.f_add_text("Hello")
 
         self.assertEqual(data.f_get_file_path(), "example.txt")
-        self.assertEqual(data.f_get_texts(), ["Hello"])
+        self.assertEqual(data.f_get_data(), ["Hello"])
 
     # verifies that the image data stores and retrieves images correctly
     def test_image_data_stores_image(self):
@@ -33,13 +33,13 @@ class c_DataTests(unittest.TestCase):
 
         data.f_add_image(pImage)
 
-        self.assertEqual(data.f_get_images(), [pImage])
+        self.assertEqual(data.f_get_data(), [pImage])
 
 
 # Unit tests for the ImportData Class
 class c_DBManagerTests(unittest.TestCase):
-    # parses text data from a JSON lines file
-    def test_parse_text_data_reads_json_lines(self):
+    # parses text data as the whole file's content, not per-line JSON
+    def test_parse_text_data_reads_whole_file(self):
         with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as file:
             file.write('{"name": "Alice"}\n{"name": "Bob"}\n')
             fpFilePath = file.name
@@ -49,16 +49,11 @@ class c_DBManagerTests(unittest.TestCase):
 
         pImporter.f_parse()
 
-        self.assertEqual(pImporter.f_get_data(), [{"name": "Alice"}, {"name": "Bob"}])
+        self.assertEqual(pImporter.f_get_data(), ['{"name": "Alice"}\n{"name": "Bob"}\n'])
 
-    # ensures that invalid JSON lines result in an empty data list
-    def test_parse_text_data_returns_empty_list_for_invalid_json(self):
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as file:
-            file.write("not valid JSON\n")
-            fpFilePath = file.name
-
-        self.addCleanup(Path(fpFilePath).unlink)
-        pImporter = c_DBManager.f_get_instance(c_TextData(fpFilePath))
+    # ensures a missing text file results in an empty data list
+    def test_parse_text_data_returns_empty_list_for_missing_file(self):
+        pImporter = c_DBManager.f_get_instance(c_TextData("this_file_does_not_exist.txt"))
 
         pImporter.f_parse()
 
@@ -72,19 +67,6 @@ class c_DBManagerTests(unittest.TestCase):
 
         self.addCleanup(Path(fpFilePath).unlink)
         pImporter = c_DBManager.f_get_instance(c_ImageData(fpFilePath))
-
-        pImporter.f_parse()
-
-        self.assertEqual(pImporter.f_get_data(), [])
-
-    # Verifies that an incorrect format for either text is handled appropriately
-    def test_parse_incorrect_format_returns_empty_list(self):
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as file:
-            file.write("not valid JSON\n")
-            fpFilePath = file.name
-
-        self.addCleanup(Path(fpFilePath).unlink)
-        pImporter = c_DBManager.f_get_instance(c_TextData(fpFilePath))
 
         pImporter.f_parse()
 

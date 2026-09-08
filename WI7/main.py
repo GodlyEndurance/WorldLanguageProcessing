@@ -26,7 +26,14 @@ Objectives:
 Operations:
 1. Convert a file into a Data object based on its type.
 2. Import the Data object into MongoDB.
-3. Optionally delete all data from MongoDB (for testing purposes).
+3. Delete data from MongoDB.
+4. Retrieve data from MongoDB.
+5. Optionally delete all data from MongoDB (for testing purposes).
+
+NOTE: FOR THE UI INTEGRATION, THE DATABASE SHOULD BE DISPLAYED. 
+- This means that files that are duplicates and are appended with (1), (2), etc. to preserve canonical form will have to have a 
+delete button to delete said file. Additionally, there can be some textbox that allows the user to delete said file by copying 
+and pasting the exact file name, including any (1), (2), etc.
 
 '''
 
@@ -45,14 +52,22 @@ except ImportError:
 def main():
     dBM = c_DBManager.f_get_instance()
 
-    helper = c_MainHelper(dBM, test=False, deleteAll=True)
+    helper = c_MainHelper(dBM, test=False, deleteAll=False)
+    # TEXT
     # helper.f_dataConvert_Import("Data.txt")
+    # helper.f_dataConvert_Import("Data.txt")
+    # helper.f_retrieveDataDB("Data.txt")
+    # helper.f_deleteDataDB("Data.txt")
 
+    # IMAGE
     # helper.f_dataConvert_Import("MockPicture.png")
-
     # helper.f_retrieveDataDB("MockPicture.png")
-
     # helper.f_deleteDataDB("MockPicture.png")
+
+    # VIDEO
+    # helper.f_dataConvert_Import("MockVideo.mov")
+    # helper.f_retrieveDataDB("MockVideo.mov")
+    # helper.f_deleteDataDB("MockVideo.mov")
 
 # ------------------------------------------------------------------------------------------------------------
 
