@@ -1,0 +1,20 @@
+
+'''
+Ocr_tradeoff.py
+
+Author: Trinh Pham
+This script is used to compare the tradeoff between different OCR engines.
+'''
+
+class c_OCRTradeoff:
+    def __init__(self, engine1: str = "Tesseract", engine2: str = "EasyOCR") -> None:
+        self.engine1 = engine1
+        self.engine2 = engine2
+
+    def f_compare_engines(self, file_path: str) -> dict:
+        # Placeholder for actual OCR comparison logic
+        # This function would run both engines on the provided file and return a comparison of their outputs
+        return {
+            self.engine1: "Output from engine 1",
+            self.engine2: "Output from engine 2"
+        }

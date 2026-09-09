@@ -28,12 +28,12 @@ from PIL import Image           # If not installed in the mongoenv, run: python 
 try:
     from . import Data
 except ImportError:
-    import Data
+    import DB.Data as Data
 
 try:
     from . import TemporaryCache
 except ImportError:
-    import TemporaryCache
+    import DB.TemporaryCache as TemporaryCache
 
 
 from pymongo import MongoClient

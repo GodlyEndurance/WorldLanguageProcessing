@@ -6,9 +6,14 @@ from pathlib import Path    # Used for handling file paths in tests
 from typing import cast     # Used for type casting in tests
 from unittest.mock import Mock, patch, MagicMock  # Used for mocking MongoDB operations
 
-from WI7.Data import c_ImageData, c_TextData
-from WI7.mainHelper import c_MainHelper
-from WI7.DBManager import c_DBManager
+try:
+    from .DB.Data import c_ImageData, c_TextData
+    from .mainHelper import c_MainHelper
+    from .DB.DBManager import c_DBManager
+except ImportError:
+    from DB.Data import c_ImageData, c_TextData
+    from mainHelper import c_MainHelper
+    from DB.DBManager import c_DBManager
 
 # Will test each function to ensure correct behavior - unit tests
 
@@ -102,7 +107,7 @@ class c_ConversionTests(unittest.TestCase):
 # MongoDB Connection Tests
 class c_MongoDBConnectionTests(unittest.TestCase):
     # verifies that connection check returns True when MongoDB is reachable
-    @patch('WI7.DBManager.MongoClient')
+    @patch('DB.DBManager.MongoClient')
     def test_connect_toMongo_success(self, pMockClient):
         pMockInstance = MagicMock()
         pMockClient.return_value = pMockInstance
@@ -114,7 +119,7 @@ class c_MongoDBConnectionTests(unittest.TestCase):
         self.assertIs(result, pMockInstance)
     
     # verifies that connection check returns False on exception
-    @patch('WI7.DBManager.MongoClient')
+    @patch('DB.DBManager.MongoClient')
     def test_connect_toMongo_failure(self, pMockClient):
         pMockClient.side_effect = Exception("Connection refused")
         
@@ -127,7 +132,7 @@ class c_MongoDBConnectionTests(unittest.TestCase):
 # MongoDB Delete Tests
 class c_MongoDBDeleteTests(unittest.TestCase):
     # verifies that f_deleteData deletes documents with matching IDs
-    @patch('WI7.DBManager.MongoClient')
+    @patch('DB.DBManager.MongoClient')
     def test_deleteData_removes_documents_by_id(self, pMockClient):
         pMockInstance = MagicMock()
         pMockClient.return_value = pMockInstance
@@ -153,7 +158,7 @@ class c_MongoDBDeleteTests(unittest.TestCase):
 
 
     # verifies that f_deleteDataAll deletes all documents
-    @patch('WI7.DBManager.MongoClient')
+    @patch('DB.DBManager.MongoClient')
     def test_deleteDataAll_removes_all_documents(self, pMockClient):
         pMockInstance = MagicMock()
         pMockClient.return_value = pMockInstance
@@ -178,7 +183,7 @@ class c_MongoDBDeleteTests(unittest.TestCase):
         pMockGridFSChunks.delete_many.assert_called_once_with({})
     
     # verifies that delete handles Image objects gracefully
-    @patch('WI7.DBManager.MongoClient')
+    @patch('DB.DBManager.MongoClient')
     def test_deleteData_handles_mixed_data_types(self, pMockClient):
         pMockInstance = MagicMock()
         pMockClient.return_value = pMockInstance
@@ -213,8 +218,8 @@ class c_DBManagerStorageTests(unittest.TestCase):
         secondData = cast(c_TextData, second.data)
         self.assertEqual(secondData.f_get_file_path(), "second.txt")
 
-    @patch("WI7.DBManager.GridFS")
-    @patch("WI7.DBManager.MongoClient")
+    @patch("DB.DBManager.GridFS")
+    @patch("DB.DBManager.MongoClient")
     def test_import_image_at_binary_limit(self, pMockClient, pMockGridFS):
         pMockInstance = MagicMock()
         pMockClient.return_value = pMockInstance
@@ -234,8 +239,8 @@ class c_DBManagerStorageTests(unittest.TestCase):
         pMockCollection.insert_one.assert_called_once()
         pMockGridFS.assert_not_called()
 
-    @patch("WI7.DBManager.GridFS")
-    @patch("WI7.DBManager.MongoClient")
+    @patch("DB.DBManager.GridFS")
+    @patch("DB.DBManager.MongoClient")
     def test_import_image_over_binary_limit_uses_gridfs(self, pMockClient, pMockGridFS):
         pMockInstance = MagicMock()
         pMockClient.return_value = pMockInstance
@@ -256,7 +261,7 @@ class c_DBManagerStorageTests(unittest.TestCase):
         pMockGridFS.return_value.put.assert_called_once()
         pMockCollection.insert_one.assert_not_called()
 
-    @patch("WI7.DBManager.MongoClient")
+    @patch("DB.DBManager.MongoClient")
     def test_delete_image_removes_binary_and_gridfs_data(self, pMockClient):
         pMockInstance = MagicMock()
         pMockClient.return_value = pMockInstance

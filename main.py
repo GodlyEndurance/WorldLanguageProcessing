@@ -38,11 +38,15 @@ and pasting the exact file name, including any (1), (2), etc.
 '''
 
 try:
-    from .DBManager import c_DBManager
+    from .DB.DBManager import c_DBManager
     from .mainHelper import c_MainHelper
+    from .OCR.OCR import c_OCR, c_GoogleCloudOCR, c_TesseractOCR
+    from .OCR.OCR_manager import c_OCRManager
 except ImportError:
-    from DBManager import c_DBManager
+    from DB.DBManager import c_DBManager
     from mainHelper import c_MainHelper
+    from OCR.OCR import c_OCR, c_GoogleCloudOCR, c_TesseractOCR
+    from OCR.OCR_manager import c_OCRManager
 
 
 # Note: Testing mode (True) is for testing the import function works correctly by showing the imported data
@@ -50,21 +54,44 @@ except ImportError:
 # ------------------------------------------------------------------------------------------------------------
     
 def main():
+
+    oCRM = c_OCRManager.f_get_instance()
     dBM = c_DBManager.f_get_instance()
 
-    helper = c_MainHelper(dBM, test=False, deleteAll=False)
-    # TEXT
-    # helper.f_dataConvert_Import("Data.txt")
-    # helper.f_dataConvert_Import("Data.txt")
-    # helper.f_retrieveDataDB("Data.txt")
+
+    helper = c_MainHelper(dBM, oCRM, test=False, deleteAll=False)
+
+    helper.f_assignOCR("GoogleCloud")  # Assign the OCR engine to Google Cloud
+
+    # helper.f_uploadFileOCR("GameTest2.MP4")  # Process the file using the assigned OCR engine
+
+    sourceName = "Game3.MP4"
+
+    rawText = helper.f_processFileOCR(sourceName)  # Detect on-screen text in the video and print it
+
+    rawText = helper.f_organizeTextOCR(rawText)
+
+    fileName = "Game3.txt"
+    
+
+    # TEXT ========================
+
+    # CREATE
+    helper.f_createFile(fileName, rawText)  # Create a text file with the organized text
+    helper.f_dataConvert_Import(fileName)
+
+    # RETRIEVE
+    # helper.f_retrieveDataDB(fileName)
+
+    # DELETE
     # helper.f_deleteDataDB("Data.txt")
 
-    # IMAGE
+    # IMAGE ========================
     # helper.f_dataConvert_Import("MockPicture.png")
     # helper.f_retrieveDataDB("MockPicture.png")
     # helper.f_deleteDataDB("MockPicture.png")
 
-    # VIDEO
+    # VIDEO ========================
     # helper.f_dataConvert_Import("MockVideo.mov")
     # helper.f_retrieveDataDB("MockVideo.mov")
     # helper.f_deleteDataDB("MockVideo.mov")

@@ -1,0 +1,4 @@
+2026-09-08 22:35:27 | file=GameTest2.MP4 | time=1415.6s | bytes=773955006 | rate= 0.52 MB B/s
+2026-09-08 22:58:38 | file=GameTest1.MP4 | time=397.3s | bytes=275469829 | rate=0.66 MB/s
+2026-09-08 23:25:43 | file=Game3.MP4 | time=379.9s | bytes=212560843 | rate=0.53 MB/s
+2026-09-08 23:36:45 | file=Game3.MP4 | time=304.6s | bytes=212560843 | rate=0.67 MB/s

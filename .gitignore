@@ -3,6 +3,10 @@ __pycache__/
 *.py[codz]
 *$py.class
 
+# Large local test videos (not meant for version control)
+*.mp4
+*.MP4
+
 # C extensions
 *.so
 
