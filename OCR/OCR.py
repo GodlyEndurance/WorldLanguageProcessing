@@ -74,15 +74,90 @@ class c_OCR:
         # Placeholder for actual OCR logic
         return f"Performed OCR on {file_path} using {self.engine} engine"
 
+
+class c_DeepSeekOCR(c_OCR):  # text-only post-processor (not its own video/image OCR); wraps DeepSeek's OpenAI-compatible chat API
+    # Set via the DEEPSEEK_API_KEY environment variable; get a key at platform.deepseek.com
+    DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY", "")
+    DEEPSEEK_MODEL = "deepseek-chat"
+    PROMPTS_DIR = Path(__file__).parent / "Prompts"
+
+    def __init__(self) -> None:
+        super().__init__(engine="DeepSeek")
+        self.pClient = OpenAI(api_key=self.DEEPSEEK_API_KEY, base_url="https://api.deepseek.com") if self.DEEPSEEK_API_KEY else None
+
+    def f_load_prompt(self, acFileName: str) -> str:   # reads a system prompt's content from its own file under Prompts/
+        return (self.PROMPTS_DIR / acFileName).read_text(encoding="utf-8")
+
+    def f_organize_text(self, acRawText: str) -> str:  # asks DeepSeek to dedupe/reorder the raw per-frame OCR text into readable output
+        if not acRawText.strip():
+            return acRawText
+        if self.pClient is None:
+            print("DEEPSEEK_API_KEY not set; skipping text organization step")
+            return acRawText
+
+        try:
+            pResponse = self.pClient.chat.completions.create(
+                model=self.DEEPSEEK_MODEL,
+                messages=[
+                    {"role": "system", "content": self.f_load_prompt("organize_text_prompt.txt")},
+                    {"role": "user", "content": f"Go ahead and sort this out into the three sections described. Here is the text: \n{acRawText}"},
+                ],
+                max_tokens=10000,   # caps the cost of a single call regardless of input size
+            )
+            acChoice = pResponse.choices[0]
+            if not acChoice.message.content:   # empty/None content isn't an exception, so it needs its own diagnostic
+                print(f"DeepSeek returned no content (finish_reason={acChoice.finish_reason}, usage={pResponse.usage}); returning raw text")
+                return acRawText
+            if acChoice.finish_reason == "length":   # organized output got cut off mid-way by max_tokens
+                print(f"DeepSeek output was truncated by max_tokens (usage={pResponse.usage})")
+            return acChoice.message.content
+        except Exception as e:
+            print(f"DeepSeek text organization failed, returning raw text: {e!r}")
+            return acRawText
+
+    def f_split_dialogue_words(self, acOrganizedText: str) -> str:  # further splits every sentence in the DIALOGUE section into its individual words
+        print("Separating dialogue section into a list of words...\n")
+        pMatch = re.search(r"=== DIALOGUE ===\n(.*?)(?=\n=== \w+ ===|\Z)", acOrganizedText, re.DOTALL)
+        if pMatch is None:
+            print("No '=== DIALOGUE ===' section found; skipping dialogue word-splitting step")
+            return acOrganizedText
+
+        acDialogueSection = pMatch.group(1)
+        if not acDialogueSection.strip():
+            return acOrganizedText
+        if self.pClient is None:
+            print("DEEPSEEK_API_KEY not set; skipping dialogue word-splitting step")
+            return acOrganizedText
+
+        try:
+            pResponse = self.pClient.chat.completions.create(
+                model=self.DEEPSEEK_MODEL,
+                messages=[
+                    {"role": "system", "content": self.f_load_prompt("split_dialogue_words_prompt.txt")},
+                    {"role": "user", "content": f"Split the words for each dialogue line below:\n{acDialogueSection}"},
+                ],
+                max_tokens=10000,
+            )
+            acChoice = pResponse.choices[0]
+            if not acChoice.message.content:
+                print(f"DeepSeek returned no content (finish_reason={acChoice.finish_reason}, usage={pResponse.usage}); returning text unchanged")
+                return acOrganizedText
+            if acChoice.finish_reason == "length":
+                print(f"DeepSeek output was truncated by max_tokens (usage={pResponse.usage})")
+
+            acNewDialogueSection = acChoice.message.content
+            return acOrganizedText[:pMatch.start(1)] + acNewDialogueSection + acOrganizedText[pMatch.end(1):]
+        except Exception as e:
+            print(f"DeepSeek dialogue word-splitting failed, returning text unchanged: {e!r}")
+            return acOrganizedText
+
+
 class c_GoogleCloudOCR(c_OCR):
     # Overridable via the GCS_BUCKET_NAME environment variable
     acBucketName = "cloud_bucket_test_for_ocr"
     BUCKET_NAME = os.environ.get("GCS_BUCKET_NAME", acBucketName)
     # ADC from `gcloud auth application-default login` has no project embedded, so it must be supplied explicitly
     PROJECT_ID = os.environ.get("GOOGLE_CLOUD_PROJECT", "project-0059f1a7-e9ee-4aca-83a")
-    # Set via the DEEPSEEK_API_KEY environment variable to enable text organization; get a key at platform.deepseek.com
-    DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY", "")
-    DEEPSEEK_MODEL = "deepseek-chat"
 
     calculationTime: float = 0.0   # tracks the total time spent in f_detect_text() for all videos processed by this instance
 
@@ -93,6 +168,7 @@ class c_GoogleCloudOCR(c_OCR):
 
     def __init__(self) -> None:
         super().__init__(engine="Google Cloud")
+        self.deepSeek = c_DeepSeekOCR()   # DeepSeek does the text-organization step after Video Intelligence detects the raw text
 
     def f_upload_video(self, file_path: str, acBlobName: str | None = None) -> str:  # uploads a local video to GCS ahead of any processing, returns its gs:// URI
         if not self.BUCKET_NAME:
@@ -124,7 +200,7 @@ class c_GoogleCloudOCR(c_OCR):
             pBlob.upload_from_file(pProgressFile, size=iTotalBytes, content_type=mimetypes.guess_type(file_path)[0])
         finally:
             pProgressFile.close()
-        print(f_bright_green(f"\rUploading video... 100.0% (done in {int(time.time() - fStartTime)}s)") + " " * 10)
+        print(f_bright_green(f"\rUploading video... 100.0% (done in {int(time.time() - fStartTime)}s)") + "\033[K")
 
         return f"gs://{self.BUCKET_NAME}/{acBlobName}"
 
@@ -162,7 +238,8 @@ class c_GoogleCloudOCR(c_OCR):
         while not bDone:   # progress_percent from the API is unreliable, so estimate from elapsed time vs. the video's duration instead
             fElapsed = time.time() - fStartTime
             fPercent = min(99.0, fElapsed / fEstimatedTotalSeconds * 100) if fEstimatedTotalSeconds else 0.0
-            print(f_green(f"\rDetecting text... {fPercent:5.1f}% ({int(fElapsed)}s elapsed, {fElapsed / 60:.1f} min){acEstimateSuffix}"), end="", flush=True)
+            acRemainingSuffix = f", {max(0.0, fEstimatedTotalSeconds - fElapsed) / 60:.1f} min remaining" if fEstimatedTotalSeconds else ""
+            print(f_green(f"\rDetecting text... {fPercent:5.1f}% ({int(fElapsed)}s elapsed, {fElapsed / 60:.1f} min{acRemainingSuffix}){acEstimateSuffix}") + "\033[K", end="", flush=True)
 
             if fElapsed >= fNextPollTime:   # only the .done() check hits the network; the print above is purely local
                 bDone = pOperation.done()
@@ -171,7 +248,7 @@ class c_GoogleCloudOCR(c_OCR):
             if not bDone:
                 time.sleep(1)
         fTotalElapsed = time.time() - fStartTime
-        print(f_bright_green(f"\rDetecting text... 100.0% (done in {int(fTotalElapsed)}s, {fTotalElapsed / 60:.1f} min){acEstimateSuffix}") + " " * 10)
+        print(f_bright_green(f"\rDetecting text... 100.0% (done in {int(fTotalElapsed)}s, {fTotalElapsed / 60:.1f} min){acEstimateSuffix}") + "\033[K")
 
         pResult = pOperation.result(timeout=600)
         if pResult is None:
@@ -189,58 +266,8 @@ class c_GoogleCloudOCR(c_OCR):
         aTimedLines.sort(key=lambda pEntry: pEntry[0])   # chronological order lets nearby name-plate/dialogue lines be grouped by DeepSeek
         return "\n".join(f"[{fSeconds:7.1f}s] {acText}" for fSeconds, acText in aTimedLines)
 
-    def f_organize_text(self, acRawText: str) -> str:  # asks DeepSeek to dedupe/reorder the raw per-frame OCR text into readable output
-        if not acRawText.strip():
-            return acRawText
-        if not self.DEEPSEEK_API_KEY:
-            print("DEEPSEEK_API_KEY not set; skipping text organization step")
-            return acRawText
-
-        try:
-            pClient = OpenAI(api_key=self.DEEPSEEK_API_KEY, base_url="https://api.deepseek.com")
-            pResponse = pClient.chat.completions.create(
-                model=self.DEEPSEEK_MODEL,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": (
-                            "1.You clean up raw text detected across video frames by an OCR system. "
-                            "Each line is prefixed with a '[123.4s]' timestamp marking when it first appeared on screen. "
-                            "2.Remove duplicate/near-duplicate lines from repeated frames, merge fragmented "
-                            "words, and organize the remaining text in chronological (timestamp) order within each section below. "
-                            "3.Keep all text in its original language; do not translate or summarize anything. "
-                            "4.Lines that appear within a couple seconds of each other are likely from the same on-screen "
-                            "moment. Where a dialogue line can be confidently matched to a nearby speaker name label based "
-                            "on this timing, prefix that line with the speaker's name (e.g. 'Name: dialogue') and drop the "
-                            "timestamp from the final output. If a line's speaker is unclear, leave it unattributed "
-                            "rather than guessing. Do not invent any new content."
-                            "5.If a LINE of text is purely Non-Japanese and does not contain any English nor Japanese character other than special symbols,"
-                            " remove it from the output."
-                            "6.Split the final output into exactly three labeled sections, in this order: "
-                            "'=== DIALOGUE ===' (actual character dialogue/story lines, attributed to speakers per rule 4); "
-                            "'=== GAMEPLAY ===' (menus, buttons, actions, damage/skill numbers, stat bars, battle prompts, and similar UI/HUD text); "
-                            "'=== MISC ===' (anything else, including system notifications and text that doesn't clearly belong in the other two, "
-                            "such as the non-related Japanese text from rule 5)."
-                            "7. Make it so that the dialogue is categorized into scenes if there are any scenes that can be identified. If there are no scenes, then just categorize the dialogue into a single scene."
-                            "8. Make sure that the gameplay section only has text that is either completely or fully in Japanese. For example, "
-                            "< CHAPTER 3 避けられない犠牲 >. Include that and such. Exclude things like these: 'Do Not', "
-                            "'Not Playing', 'Disturb', 'EPISODE'. Also exclude things that are only just numbers with no Japanese characters. " 
-                        ),
-                    },
-                    {"role": "user", "content": f"Go ahead and sort this out into the three sections described. Here is the text: \n{acRawText}"},
-                ],
-                max_tokens=10000,   # caps the cost of a single call regardless of input size
-            )
-            acChoice = pResponse.choices[0]
-            if not acChoice.message.content:   # empty/None content isn't an exception, so it needs its own diagnostic
-                print(f"DeepSeek returned no content (finish_reason={acChoice.finish_reason}, usage={pResponse.usage}); returning raw text")
-                return acRawText
-            if acChoice.finish_reason == "length":   # organized output got cut off mid-way by max_tokens
-                print(f"DeepSeek output was truncated by max_tokens (usage={pResponse.usage})")
-            return acChoice.message.content
-        except Exception as e:
-            print(f"DeepSeek text organization failed, returning raw text: {e!r}")
-            return acRawText
+    def f_organize_text(self, acRawText: str) -> str:  # delegates to c_DeepSeekOCR to dedupe/reorder the raw per-frame OCR text into readable output
+        return self.deepSeek.f_organize_text(acRawText)
 
     def f_log_metrics(self, file_path: str, iVideoBytes: int, fElapsedSeconds: float) -> None:   # appends one line per fully-processed file: time, byte size, and MB/sec rate
         pLogDir = Path(__file__).parent.parent / "Logs"

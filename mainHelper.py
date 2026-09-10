@@ -62,6 +62,11 @@ class c_MainHelper:
             raise ValueError("An OCR manager is required for OCR operations")
         return self.oCRM.f_organize_text(acRawText)
 
+    def f_splitDialogueWordsOCR(self, acOrganizedText: str) -> str:   # further splits every sentence in the DIALOGUE section into its individual words
+        if self.oCRM is None:
+            raise ValueError("An OCR manager is required for OCR operations")
+        return self.oCRM.f_split_dialogue_words(acOrganizedText)
+
 
     # PUBLIC INTERFACE FOR THE USER
     def f_dataConvert_Import(self, acFileName: str) -> list:            # dataObjectConvert() + importData()
@@ -132,4 +137,13 @@ class c_MainHelper:
             fpFilePath.parent.mkdir(parents=True, exist_ok=True)
         with open(fpFilePath, "w", encoding="utf-8") as f:
             f.write(acContent)
-        
+
+    def f_adjustName(self, acOldFileName: str, acNewFileName: str) -> None:   # renames the local output file and, if already imported, its stored DB filename too
+        fpOldFilePath = self.f_outputFilePath(acOldFileName)
+        fpNewFilePath = self.f_outputFilePath(acNewFileName)
+
+        if fpOldFilePath.exists():
+            fpOldFilePath.rename(fpNewFilePath)
+
+        if self.dbManager is not None:
+            self.dbManager.f_renameData(acOldFileName, acNewFileName)

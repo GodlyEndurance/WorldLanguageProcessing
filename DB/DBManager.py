@@ -148,6 +148,41 @@ class c_DBManager:
             iLineNumber = traceback.extract_stack()[-1].lineno
             logger.exception(f"Failed to delete from MongoDB at line {iLineNumber}: {e}")
 
+    def f_renameData(self, acOldFileName: str, acNewFileName: str) -> bool:    # Renames a stored filename in either the regular collection or GridFS; returns True if a match was renamed
+        try:
+            pClient = MongoClient(self.MONGODB_URI)
+            pDb = pClient[self.DB_NAME]
+            pCollection = pDb[self.COLLECTION_NAME]
+            pGridFSFiles = pDb["fs.files"]
+        except Exception as e:
+            iLineNumber = traceback.extract_stack()[-1].lineno
+            logger.exception(f"Failed to connect to MongoDB at line {iLineNumber}: {e}")
+            return False
+
+        try:
+            if pCollection.find_one({"filename": acNewFileName}) or pGridFSFiles.find_one({"filename": acNewFileName}):
+                iLineNumber = traceback.extract_stack()[-1].lineno
+                logger.error(f"Cannot rename at line {iLineNumber}: a document already named {acNewFileName!r} already exists")
+                return False
+
+            pResult = pCollection.update_one({"filename": acOldFileName}, {"$set": {"filename": acNewFileName}})
+            if pResult.matched_count == 0:   # not in the regular collection, so it must be a GridFS-stored file
+                pResult = pGridFSFiles.update_one({"filename": acOldFileName}, {"$set": {"filename": acNewFileName}})
+
+            bRenamed = pResult.matched_count > 0
+            if bRenamed:
+                self.temp_cache.f_rename_in_temp_storage(acOldFileName, acNewFileName)
+            else:
+                iLineNumber = traceback.extract_stack()[-1].lineno
+                logger.error(f"No document found to rename at line {iLineNumber}: {acOldFileName!r}")
+            return bRenamed
+        except Exception as e:
+            iLineNumber = traceback.extract_stack()[-1].lineno
+            logger.exception(f"Failed to rename in MongoDB at line {iLineNumber}: {e}")
+            return False
+        finally:
+            pClient.close()
+
     def f_get_data(self) -> list[dict[str, object] | Image.Image | str]:          # Not really used right now - just used as a getter for the future
         # Simply returns the result list, which contains the data retrieved from the Data object
         return self.result

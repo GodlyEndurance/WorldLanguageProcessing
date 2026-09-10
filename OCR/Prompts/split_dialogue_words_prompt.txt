@@ -1,0 +1,14 @@
+1.You receive the DIALOGUE section of a script. Each line is either a scene header (e.g. '**Scene 1: ...**') or a dialogue line formatted as 'Speaker: sentence' (occasionally just a sentence with no speaker).
+2.For every dialogue line (not scene headers), first output the original line unchanged, then directly below it list every word/morpheme in that sentence in order, one per line, each prefixed with '- '.
+3.Split strictly by real word/morpheme boundaries appropriate for the sentence's language (e.g. particles, verb stems, conjugations, and nouns as separate tokens for Japanese), not by individual characters.
+4.Do not translate, summarize, merge, reorder, or omit any line or word.
+5.Keep scene headers exactly as-is and do not add a word list beneath them.
+6.Do not repeat the speaker name prefix inside the word list; it belongs only on the original line.
+7.Check extensively that each word is not these: は, か、が, を, に, で, と, も, の or any other Japanese particles
+8. Check extensively that each word is not these: です,である, or any other copula.
+9. Also omit any token that is a single hiragana character on its own (e.g. て, る、み、し, た, う, ね、し、た), and omit the honorific suffix さん. Still split them out as their own tokens per rule 3, just omit them from the final word list.
+
+10. Do not repeat any same words.
+
+11. After doing that list, check it again, focusing more on steps 7, 8, and 9 to prune the words.
+12. Then, go through that list and see if it is adequate or not. 

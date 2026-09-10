@@ -37,6 +37,9 @@ and pasting the exact file name, including any (1), (2), etc.
 
 '''
 
+from numpy import empty
+
+
 try:
     from .DB.DBManager import c_DBManager
     from .mainHelper import c_MainHelper
@@ -63,28 +66,47 @@ def main():
 
     helper.f_assignOCR("GoogleCloud")  # Assign the OCR engine to Google Cloud
 
-    # helper.f_uploadFileOCR("GameTest2.MP4")  # Process the file using the assigned OCR engine
-
-    sourceName = "Game3.MP4"
-
-    rawText = helper.f_processFileOCR(sourceName)  # Detect on-screen text in the video and print it
-
-    rawText = helper.f_organizeTextOCR(rawText)
-
-    fileName = "Game3.txt"
+    sourceName = []
+    fileName = []
     
+    # sourceName.append("E7C3E4.MP4")
+    # fileName.append("E7C3E4.txt")
+
+    # Match each source file to its corresponding output file by the same index.
+    # Example: sourceName[0] -> fileName[0], sourceName[1] -> fileName[1]
+    pairedFiles = {}
+    for i in range(len(sourceName)):
+        pairedFiles[sourceName[i]] = fileName[i]
+
+    # helper.f_uploadFileOCR("E7C3E4.MP4")  # Process the file using the assigned OCR engine
+
+    for source_file, output_file in pairedFiles.items():
+        if empty(source_file):
+            return
+        
+        print(f"Processing source file: {source_file} with output file: {output_file}")
+        rawText = helper.f_processFileOCR(source_file)  # Detect on-screen text in the video and print it
+        rawText = helper.f_organizeTextOCR(rawText)
+        rawText = helper.f_splitDialogueWordsOCR(rawText)  # further split each DIALOGUE sentence into its individual words
+
+        helper.f_createFile(output_file, rawText)  # Create a text file with the organized text
+        helper.f_dataConvert_Import(output_file)
 
     # TEXT ========================
 
     # CREATE
-    helper.f_createFile(fileName, rawText)  # Create a text file with the organized text
-    helper.f_dataConvert_Import(fileName)
+    # helper.f_createFile(output_file, rawText)  # Create a text file with the organized text
+    # helper.f_dataConvert_Import(output_file)
 
     # RETRIEVE
     # helper.f_retrieveDataDB(fileName)
 
     # DELETE
     # helper.f_deleteDataDB("Data.txt")
+
+    """  helper.f_adjustName("Game1.txt", "E7C3E1.txt")
+    helper.f_adjustName("Game2.txt", "E7C3E2.txt")
+    helper.f_adjustName("Game3.txt", "E7C3E3.txt") """
 
     # IMAGE ========================
     # helper.f_dataConvert_Import("MockPicture.png")

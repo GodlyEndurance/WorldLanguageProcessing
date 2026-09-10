@@ -58,3 +58,8 @@ class c_TemporaryCache:
     def f_remove_from_temp_storage(self, acFileName: str) -> None:   # keeps the duplicate-name cache in sync with a deletion
         if self.temp_storage_during_execution is not None:
             self.temp_storage_during_execution.pop(acFileName, None)
+
+    def f_rename_in_temp_storage(self, acOldFileName: str, acNewFileName: str) -> None:   # keeps the duplicate-name cache in sync with a rename
+        if self.temp_storage_during_execution is not None:
+            self.temp_storage_during_execution.pop(acOldFileName, None)
+            self.temp_storage_during_execution[acNewFileName] = None

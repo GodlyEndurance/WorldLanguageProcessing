@@ -2,3 +2,8 @@
 2026-09-08 22:58:38 | file=GameTest1.MP4 | time=397.3s | bytes=275469829 | rate=0.66 MB/s
 2026-09-08 23:25:43 | file=Game3.MP4 | time=379.9s | bytes=212560843 | rate=0.53 MB/s
 2026-09-08 23:36:45 | file=Game3.MP4 | time=304.6s | bytes=212560843 | rate=0.67 MB/s
+2026-09-09 21:19:25 | file=Game1.MP4 | time=527.9s | bytes=275469829 | rate=0.50 MB/s
+2026-09-09 21:44:14 | file=Game2.MP4 | time=1480.2s | bytes=773955006 | rate=0.50 MB/s
+2026-09-09 21:51:21 | file=Game3.MP4 | time=416.5s | bytes=212560843 | rate=0.49 MB/s
+2026-09-09 22:20:38 | file=Game2.MP4 | time=1104.8s | bytes=773955006 | rate=0.67 MB/s
+2026-09-09 22:40:34 | file=E7C3E4.MP4 | time=544.6s | bytes=399353976 | rate=0.70 MB/s
