@@ -1,0 +1,8 @@
+1. You receive a list of vocabulary words (one per line) and a block of dialogue text those words were extracted from.
+2. For each word in the list, search the dialogue text for a sentence that contains that exact word.
+3. If a matching sentence is found, output it verbatim from the dialogue text on the same line as the word, formatted as 'word: sentence', with every occurrence of the word inside that sentence wrapped in double asterisks (e.g. **word**).
+4. If the word appears in more than one sentence, include every distinct sentence it appears in, separated by '; ', all on that same 'word: sentence' line.
+5. If the word does not appear anywhere in the dialogue text, output 'word: ' with nothing after the colon rather than inventing an example.
+6. Preserve the original order of the word list exactly; output exactly one line per input word, in the same order they were given.
+7. Do not translate, summarize, merge, reorder, or omit any word from the input list.
+8. Do not add any commentary, headers, numbering, or extra blank lines - output only the 'word: sentence' lines.

@@ -6,6 +6,25 @@ Author: Trinh Pham
 
 This file contains helper functions for the main executable script.
 
+# Public operations of Facade pattern:
+
+    OCR
+    1. f_assignOCR            Assign the OCR engine to use
+    2. f_processFileOCR       Process the source file using the assigned OCR engine
+    3. f_createFile           Create a text file with the organized text
+    4. f_uploadFileOCR        Upload the file to the OCR engine's storage (if applicable) and return the remote path or URL
+    5. f_organizeTextOCR      Organize the already-detected text
+    6. f_uploadFileOCR        Upload the file to the OCR engine's storage (if applicable) and return the remote path or URL
+    7. f_organizeTextOCR      Organize the already-detected text
+
+    Database
+    1. f_dataConvert_Import   Convert the text file into a Data object and import it into MongoDB
+    2. f_retrieveDataDB       Retrieve data from MongoDB based on the file type
+    3. f_deleteDataDB         Delete data from MongoDB based on the file type
+    4. f_adjustName           Rename the local output file and its stored DB filename if already imported
+    5. f_deleteAllDataDB     Delete all data from MongoDB (for testing purposes)
+
+
 '''
 
 from pathlib import Path
@@ -33,12 +52,7 @@ class c_MainHelper:
                 raise ValueError("A DB manager is required when deleteAll is True")
             self.dbManager.f_deleteDataAll()
 
-    def f_rawDataPath(self, acFileName: str) -> Path:   # resolves input filenames against the Raw_Data folder
-        return Path(__file__).parent / "Raw_Data" / acFileName
-
-    def f_outputFilePath(self, acFileName: str) -> Path:   # resolves generated/output filenames against the "output files" folder
-        return Path(__file__).parent / "output files" / acFileName
-
+    # ==================== PUBLIC INTERFACE FOR THE USER ====================
     def f_assignOCR(self, engine: str) -> None:
         if self.oCRM is None:
             raise ValueError("An OCR manager is required for OCR operations")
@@ -67,11 +81,9 @@ class c_MainHelper:
             raise ValueError("An OCR manager is required for OCR operations")
         return self.oCRM.f_split_dialogue_words(acOrganizedText)
 
-
-    # PUBLIC INTERFACE FOR THE USER
     def f_dataConvert_Import(self, acFileName: str) -> list:            # dataObjectConvert() + importData()
         fpFilePath = self.f_rawDataPath(acFileName)
-        if not fpFilePath.exists():   # not in Raw_Data, so check the "output files" folder (e.g. text created via f_createFile)
+        if not fpFilePath.exists():   # not in OCR_input files, so check the "OCR_output files" folder (e.g. text created via f_createFile)
             fpFilePath = self.f_outputFilePath(acFileName)
         data = self.f_dataObjectConvert(fpFilePath)
         if data is None:
@@ -79,33 +91,6 @@ class c_MainHelper:
 
         return self.f_importData(data)
 
-    # NO DIRECT ACCESS FOR THE USER (PRIVATE)
-    def f_dataObjectConvert(self, fpFilePath: Path) -> c_Data:              # returns a Data object based on the file type
-        if fpFilePath.suffix.lower() in (".png", ".jpg", ".jpeg"):
-            return c_ImageData(str(fpFilePath))
-        elif fpFilePath.suffix.lower() == ".txt":
-            return c_TextData(str(fpFilePath))
-        elif fpFilePath.suffix.lower() in (".mp4", ".avi", ".mov"):
-            return c_VideoData(str(fpFilePath))
-        else:
-            raise ValueError("Unsupported file type")
-
-    # NO DIRECT ACCESS FOR THE USER (PRIVATE)
-    def f_importData(self, data: c_Data) -> list:                       # returns the imported Data object 
-        if self.dbManager is None:
-            raise ValueError("A DB manager is required for database operations")
-        self.dbManager.data = data
-        self.dbManager.result = []
-        pImporter = self.dbManager
-        pImporter.f_parse()
-        pImporter.f_import_toMongo()
-
-        if self.test:
-            pImporter.f_show()
-
-        return pImporter.f_get_data()   # Not really needed right now - but maybe for future.
-
-    # PUBLIC INTERFACE FOR THE USER
     def f_retrieveDataDB(self, acFileName: str) -> list:                 # retrieves data from the database based on the file type
         fpFilePath = self.f_rawDataPath(acFileName)
         data = self.f_dataObjectConvert(fpFilePath)
@@ -118,7 +103,6 @@ class c_MainHelper:
         pImporter.f_show()
         return pImporter.f_get_data()   # Not really needed right now - but maybe for future.
 
-    # PUBLIC INTERFACE FOR THE USER
     def f_deleteDataDB(self, acFileName: str) -> None:                 # deletes data from the database based on the file type
         fpFilePath = self.f_rawDataPath(acFileName)
         data = self.f_dataObjectConvert(fpFilePath)
@@ -130,7 +114,7 @@ class c_MainHelper:
         pImporter.f_parse()
         pImporter.f_deleteData()
 
-    def f_createFile(self, acFileName: str, acContent: str) -> None:   # creates a text file with the given content inside the "output files" folder
+    def f_createFile(self, acFileName: str, acContent: str) -> None:   # creates a text file with the given content inside the "OCR_output files" folder
         fpFilePath = self.f_outputFilePath(acFileName)
 
         if not fpFilePath.parent.exists():
@@ -147,3 +131,34 @@ class c_MainHelper:
 
         if self.dbManager is not None:
             self.dbManager.f_renameData(acOldFileName, acNewFileName)
+
+    # ================= NO DIRECT ACCESS FOR THE USER (PRIVATE) =================
+    def f_rawDataPath(self, acFileName: str) -> Path:   # resolves input filenames against the OCR_input files folder
+        return Path(__file__).parent / "OCR_input files" / acFileName
+
+    def f_outputFilePath(self, acFileName: str) -> Path:   # resolves generated/output filenames against the "OCR_output files" folder
+        return Path(__file__).parent / "OCR_output files" / acFileName
+
+    def f_dataObjectConvert(self, fpFilePath: Path) -> c_Data:              # returns a Data object based on the file type
+        if fpFilePath.suffix.lower() in (".png", ".jpg", ".jpeg"):
+            return c_ImageData(str(fpFilePath))
+        elif fpFilePath.suffix.lower() == ".txt":
+            return c_TextData(str(fpFilePath))
+        elif fpFilePath.suffix.lower() in (".mp4", ".avi", ".mov"):
+            return c_VideoData(str(fpFilePath))
+        else:
+            raise ValueError("Unsupported file type")
+
+    def f_importData(self, data: c_Data) -> list:                       # returns the imported Data object
+        if self.dbManager is None:
+            raise ValueError("A DB manager is required for database operations")
+        self.dbManager.data = data
+        self.dbManager.result = []
+        pImporter = self.dbManager
+        pImporter.f_parse()
+        pImporter.f_import_toMongo()
+
+        if self.test:
+            pImporter.f_show()
+
+        return pImporter.f_get_data()   # Not really needed right now - but maybe for future.

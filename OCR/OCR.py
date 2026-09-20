@@ -238,8 +238,8 @@ class c_GoogleCloudOCR(c_OCR):
         while not bDone:   # progress_percent from the API is unreliable, so estimate from elapsed time vs. the video's duration instead
             fElapsed = time.time() - fStartTime
             fPercent = min(99.0, fElapsed / fEstimatedTotalSeconds * 100) if fEstimatedTotalSeconds else 0.0
-            acRemainingSuffix = f", {max(0.0, fEstimatedTotalSeconds - fElapsed) / 60:.1f} min remaining" if fEstimatedTotalSeconds else ""
-            print(f_green(f"\rDetecting text... {fPercent:5.1f}% ({int(fElapsed)}s elapsed, {fElapsed / 60:.1f} min{acRemainingSuffix}){acEstimateSuffix}") + "\033[K", end="", flush=True)
+            acRemainingSuffix = f" [{max(0.0, fEstimatedTotalSeconds - fElapsed) / 60:.1f} min remaining]" if fEstimatedTotalSeconds else ""
+            print(f_green(f"\rDetecting text... {fPercent:5.1f}% ({int(fElapsed)}s elapsed, {fElapsed / 60:.1f} min){acEstimateSuffix}{acRemainingSuffix}") + "\033[K", end="", flush=True)
 
             if fElapsed >= fNextPollTime:   # only the .done() check hits the network; the print above is purely local
                 bDone = pOperation.done()
