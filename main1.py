@@ -41,12 +41,12 @@ and pasting the exact file name, including any (1), (2), etc.
 
 try:
     from .DB.DBManager import c_DBManager
-    from .mainHelper import c_MainHelper
+    from .mainHelper1 import c_MainHelper
     from .OCR.OCR import c_OCR, c_GoogleCloudOCR, c_TesseractOCR
     from .OCR.OCR_manager import c_OCRManager
 except ImportError:
     from DB.DBManager import c_DBManager
-    from mainHelper import c_MainHelper
+    from mainHelper1 import c_MainHelper
     from OCR.OCR import c_OCR, c_GoogleCloudOCR, c_TesseractOCR
     from OCR.OCR_manager import c_OCRManager
 
@@ -87,8 +87,8 @@ def main():
 
     # Prepare the list of source files and their corresponding output files
     # ==========================================================================================================
-    sourceName = []
-    fileName = []
+    sourceName = ["E7C3E3.txt"]
+    fileName = ["E7C3E3.txt"]
     
     """ sourceName.append("魔王様は回復魔術を極めたいC3.MP4")
     fileName.append("魔王様は回復魔術を極めたいC3.txt") """
@@ -106,13 +106,16 @@ def main():
             return
         
         print(f"Processing source file: {source_file} with output file: {output_file}")
-        rawText = helper.f_processFileOCR(source_file)  # Detect on-screen text in the video and print it
-        rawText = helper.f_organizeTextOCR(rawText)
+        # rawText = helper.f_processFileOCR(source_file)  # Detect on-screen text in the video and print it
+        # rawText = helper.f_organizeTextOCR(rawText)
         # NOTE: dialogue word-splitting is intentionally not done here; main2.py's vocab pipeline
         # re-splits this output file itself and expects it to still have intact DIALOGUE sentences.
 
-        helper.f_createFile(output_file, rawText)  # Create a text file with the organized text
-        helper.f_dataConvert_Import(output_file)
+        # helper.f_createFile(output_file, rawText)  # Create a text file with the organized text
+        # helper.f_dataConvert_Import(output_file)
+
+        helper.f_retrieveDataDB(output_file)
+        
     # ==========================================================================================================
 
 
